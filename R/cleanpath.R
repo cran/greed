@@ -11,7 +11,10 @@ NULL
 
 # extract the pareto front
 extract_front_height=function(sol){
-  
+  if(sol@K==1){
+    H=c(0)
+    return(H)
+  }
   # vector of icls value from root to leaves
   icl=c(sol@icl,sapply(sol@path,function(v){v$icl1}))
   icl = icl[length(icl):1]
@@ -114,8 +117,7 @@ cleanpathopt = function(pathsol){
     
     
     # check for non empty path
-    if(length(path)>0){
-      
+    if(length(pathsol@path)>1){
       # compute the pareto front and extract the height as -log(alpha) of each merge in the front
       Hfront = extract_front_height(pathsol)
       # initialisation
@@ -209,9 +211,7 @@ cleanpath = function(pathsol){
   # check for possible better solution than init with alpha=1 along the path
   if(length(path)>0){
     icli = sapply(path,function(p){p$icl1})
-    print(icli)
     if(max(icli)>pathsol@icl){
-      print("cleaning")
       im = which.max(icli)
       K = path[[im]]$K
       pathsol@K = K

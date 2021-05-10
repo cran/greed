@@ -113,7 +113,7 @@ setMethod(f = "cut",
 #' 
 #' @param X data to cluster either a matrix,an array or a \code{\link{dgCMatrix-class}}
 #' @param K initial number of cluster
-#' @param model a generative model to fit \code{\link{sbm-class}}, \code{\link{dcsbm-class}}, \code{\link{co_dcsbm-class}}, \code{\link{mm-class}} or \code{\link{mvmreg-class}}
+#' @param model a generative model to fit \code{\link{sbm-class}}, \code{\link{dcsbm-class}}, \code{\link{co_dcsbm-class}}, \code{\link{mm-class}},\code{\link{gmm-class}}, \code{\link{diaggmm-class}} or \code{\link{mvmreg-class}}
 #' @param alg an optimization algorithm of class \code{\link{hybrid-class}} (default), \code{\link{multistarts-class}}, \code{\link{seed-class}} or \code{\link{genetic-class}}
 #' @param verbose Boolean for verbose mode 
 #' @return an \code{\link{icl_path-class}} object
@@ -154,6 +154,9 @@ find_model = function(X){
     }
     
   }else{
+    if(methods::is(X,"data.frame")){
+      X=as.matrix(X)
+    }
     if(methods::is(X,"dgCMatrix") | methods::is(X,"matrix")){
       if(nrow(X)==ncol(X)){
         if(sum(is.na(X))>0){
@@ -173,11 +176,12 @@ find_model = function(X){
         if(all(round(X)==X)){
           model = methods::new("co_dcsbm")  
         }else{
-          model = methods::new("gmm",N0=ncol(X),epsilon=stats::cov(X),mu=apply(X,2,mean),tau=0.0001)
+          model = methods::new("gmm",N0=ncol(X),epsilon=0.1*diag(diag(stats::cov(X))),mu=apply(X,2,mean),tau=0.01)
+          #model = methods::new("diaggmm",mu=apply(X,2,mean),beta=0.1)
         }
       }
     }else{
-      stop(paste0("Unsupported data type: ", class(X) ," use matrix, sparse dgCMatrix or array."),call. = FALSE)
+      stop(paste0("Unsupported data type: ", class(X) ," use a data.frame, a matrix, a sparse dgCMatrix or an array."),call. = FALSE)
     }
   }
   model
@@ -193,13 +197,28 @@ find_model = function(X){
 #' @param verbose Boolean for verbose mode 
 #' @return an \code{\link{icl_path-class}} object
 #' @export
-greed_cond = function(X,Y,K=20,model=methods::new("mvmreg",N0=ncol(Y)+1),alg=methods::new("hybrid"),verbose=FALSE){
-  if(nrow(X)!=nrow(Y)){
-    stop("Incomptible sizes between X and Y.")
+greed_cond = function(X,Y,K=20,model=find_model_cond(X,Y),alg=methods::new("hybrid"),verbose=FALSE){
+  data = preprocess(model,list(X=X,Y=Y))
+  modelname = toupper(model@name)
+  if("type" %in% methods::slotNames(model)){
+    modelname = paste(model@type,modelname)
   }
-  fit(model,alg,list(X=X,Y=Y,N=nrow(X),moves=as.sparse(matrix(1,K,K))),K,verbose)
+  if("sampling" %in% methods::slotNames(model)){
+    modelname = paste(modelname,"with",model@sampling,"sampling")
+  }
+  cat(paste0("------- ",modelname, " model fitting ------\n"))
+  sol = fit(model,alg,data,K,verbose)
+  sol = postprocess(sol,data)
+  cat("------- Final clustering -------\n")
+  print(sol)
+  cat("\n")
+  sol
 }
 
+
+find_model_cond = function(X,Y){
+  methods::new("mvmreg",N0=ncol(X)+1)
+}
 setGeneric("reorder", function(model, obs_stats,order) standardGeneric("reorder")) 
 
 setGeneric("fit",function(model,alg,...) standardGeneric("fit")) 

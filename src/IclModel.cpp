@@ -168,7 +168,7 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::sp_mat & mo
           // update the stats and deal with cluster death
           if(counts(cl(cnode))==1){
               // remove the cluster from the move matrix
-              delrowcol(moves_mat,cl(cnode));
+              moves_mat=delrowcol_copy(moves_mat,cl(cnode));
 
           }
           this->swap_update(cnode,ncl);
@@ -309,13 +309,12 @@ SpMergeMat IclModel::delta_merge(const arma::sp_mat & merge_graph){
 
 
 // update merge matrix after merge of obk/obl sparse
-SpMergeMat IclModel::delta_merge(const arma::sp_mat & merge_graph, int obk, int obl,const List & old_stats){
+SpMergeMat IclModel::delta_merge(arma::sp_mat & merge_graph, int obk, int obl,const List & old_stats){
   // optimized version to compute only new values of the merge mat
   //delta = delta(arma::find(arma::linspace(0,K,K+1)!=obk),arma::find(arma::linspace(0,K,K+1)!=obk));
   
-  arma::sp_mat deltaO = merge_graph;
-  delrowcol(deltaO,obk);
-  arma::sp_mat delta = deltaO;
+  
+  arma::sp_mat delta = delrowcol_copy(merge_graph,obk);
   int bk = 0;
   int bl = 0;
   int k,l;
@@ -465,7 +464,7 @@ List IclModel::greedy_merge_path(){
   int nbmerge = 0;
   List obs_stats = this->get_obs_stats();
   arma::vec counts =as<arma::vec>(obs_stats["counts"]);
-  double icl = this->icl_emiss(obs_stats)-log(K)+arma::accu(lgamma(counts))-lgamma(N);
+  double icl = this->icl_emiss(obs_stats)-log(static_cast<double>(K))+arma::accu(lgamma(counts))-lgamma(N);
   double iclold = icl;
   int k=0;
   int l=0;
@@ -490,7 +489,7 @@ List IclModel::greedy_merge_path(){
     obs_stats = this->get_obs_stats();
     if(merge_mat.getValue()>-std::numeric_limits<double>::infinity()){
       counts =as<arma::vec>(obs_stats["counts"]);
-      icl = this->icl_emiss(obs_stats)-log(K)+arma::accu(lgamma(counts))-lgamma(N);
+      icl = this->icl_emiss(obs_stats)-log(static_cast<double>(K))+arma::accu(lgamma(counts))-lgamma(N);
     }else{
       icl = -std::numeric_limits<double>::infinity();
     }

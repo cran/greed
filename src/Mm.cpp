@@ -6,11 +6,14 @@ using namespace Rcpp;
 
 
 
-Mm::Mm(arma::sp_mat& xp,double alphai,double betai,arma::vec& clt,bool verb){
+Mm::Mm(arma::sp_mat& xp,S4 modeli,arma::vec& clt,bool verb){
+  
+  model = modeli;
+  
   // dirichlet prior parameter on proportion
-  alpha = alphai;
+  alpha = model.slot("alpha");
   // dirichlet prior parameter on proportion
-  beta = betai;
+  beta = model.slot("beta");
   // data
   // store transpose for fast colum acces
   xt = xp.t();
@@ -158,7 +161,7 @@ void Mm::swap_update(int i,int newcl){
     // remove from counts
     counts.shed_row(oldcl);
     // remove from x_counts
-    x_counts.shed_col(oldcl);
+    x_counts = x_counts.cols(arma::find(arma::linspace(0,K-1,K)!=oldcl));
     // remove from col_sums
     col_sums.shed_col(oldcl);
     // oldies : .rows(arma::find(arma::linspace(0,K-1,K)!=oldcl));
@@ -210,7 +213,7 @@ void Mm::merge_update(int k,int l){
   counts.shed_row(k);
   // update x_counts
   x_counts.col(l) = x_counts.col(k)+x_counts.col(l);
-  x_counts.shed_col(k);
+  x_counts = x_counts.cols(arma::find(arma::linspace(0,K-1,K)!=k));
   // update col_sums
   col_sums(l) = col_sums(l) + col_sums(k);
   col_sums.shed_col(k);

@@ -53,6 +53,10 @@ groupspy = function(x,clust){
 
 
 plot_front = function(sol){
+  if(sol@K<3){
+    message("The fit contains only less than 3 clusters, an empty plot was produced.")
+    return(ggplot2::ggplot())
+  }
   icl = c(sol@icl,sapply(sol@path,function(v){v$icl1}))
   ggicl = data.frame(icl = icl[length(icl):1], K  = 1:length(icl))
   #ggfront= sol@ggtree %>% mutate(x=-H) %>% select(x,K) %>% arrange(x) %>% head(sol@K) %>% left_join(ggicl) %>% mutate(xp=lag(x)) 
@@ -71,6 +75,10 @@ plot_front = function(sol){
 }
 
 lapath = function(x){
+  if(x@K<3){
+    message("The fit contains less than 3 clusters, an empty plot was produced.")
+    return(ggplot2::ggplot())
+  }
   gg = data.frame(k=sapply(x@path,function(p){p$K}),logalpha=sapply(x@path,function(p){p$logalpha}))
   gg = rbind(gg,data.frame(k=length(x@obs_stats$counts),logalpha=x@logalpha)) 
   ggplot2::ggplot(data=gg)+ggplot2::geom_line(ggplot2::aes_(x=~k,y=~-logalpha))+
@@ -82,6 +90,10 @@ lapath = function(x){
 
 
 iclpath = function(x){
+  if(x@K==1){
+    message("The fit contains only one cluster, an empty plot was produced.")
+    return(ggplot2::ggplot())
+  }
   gg = data.frame(k=sapply(x@path,function(p){length(p$counts)}),icl=sapply(x@path,function(p){p$icl}))
   gg = rbind(gg,data.frame(k=length(x@obs_stats$counts),icl=x@icl)) 
   ggplot2::ggplot(data=gg)+ggplot2::geom_line(ggplot2::aes_(x=~k,y=~icl))+
@@ -166,6 +178,10 @@ co_nodelink = function(sol){
 # dendogram visualisation
 
 dendo = function(x){
+  if(x@K<3){
+    message("The fit contains less than 3 clusters, an empty plot was produced.")
+    return(ggplot2::ggplot())
+  }
   ggtree = x@ggtree
   tree=ggplot2::ggplot()+ggplot2::geom_segment(data=ggtree[ggtree$node %in% ggtree$tree,],ggplot2::aes_(x=~xmin,y=~H,xend=~xmax,yend=~H))+
     ggplot2::geom_segment(data=ggtree[-1,],ggplot2::aes_(x=~x,y=~H,xend=~x,yend=~Hend))+
@@ -449,8 +465,82 @@ nodelink_cube = function(sol){
     ggplot2::theme_minimal()
 }
 
+#' @title Make a matrix of plots with a given data and gmm fitted parameters
+#' 
+#' @description 
+#' Make a matrix of plots with a given data and gmm fitted parameters with ellipses.
+#' @param sol a \code{\link{gmm_fit-class}} or \code{\link{diaggmm_fit-class}}
+#' @param X the data used for the fit a data.frame or matrix.
+#' @return a \code{\link{ggplot2}} graphic 
+#' @export
+gmmpairs = function(sol,X){
+  if(!(methods::is(sol,"gmm_fit") | methods::is(sol,"diaggmm_fit") )){
+    stop("Input sol must be a gmm_fit or diaggmm_fit object.",call. = FALSE)
+  }
+  if(!(methods::is(X,"matrix") | methods::is(X,"data.frame") )){
+    stop("Input X must be a matrix or data.frame.",call. = FALSE)
+  }
+  if(nrow(X)!=length(sol@cl) | ncol(X)!=length(sol@obs_stats$regs[[1]]$m) ){
+    stop("Dimension mismatch between the fitted model and the data.",call. = FALSE)
+  }
+  vnames = names(X)
+  plts.df = list()
+  ii=1
+  nb_ech = 500
+  params = coef(sol)
+  for(i in 1: ncol(X)){
+    for (j in 1:ncol(X)){
+      if(i==j){
+        #plt = ggally_text(paste("Plot #", i, sep = ""))
+        limsi=c(range(X[,vnames[i]])[1]-diff(range(X[,vnames[i]]))*0.1,range(X[,i])[2]+diff(range(X[,vnames[i]]))*0.1)
+        x = seq(limsi[1],limsi[2],length.out = nb_ech)
+        pdfs    = lapply(1:sol@K,function(k){params$pi[k]*stats::dnorm(x,mean=params$muk[[k]][j],sd=sqrt(params$Sigmak[[k]][j,j]))})
+        pdfs.df = data.frame(pdf=do.call(c,pdfs),cl=rep(1:sol@K,each=nb_ech),x=rep(x,sol@K))
+        pdfmix  = data.frame(pdf=colSums(do.call(rbind,pdfs)),x=x)
+        
+        plt = ggplot2::ggplot()+
+          ggplot2::geom_line(data=pdfmix,ggplot2::aes_(x=~x,y=~pdf))+
+          ggplot2::geom_line(data=pdfs.df,ggplot2::aes_(x=~x,y=~pdf,color=~factor(cl),group=~cl))+
+          ggplot2::geom_segment(data=X,ggplot2::aes_(x=as.name(vnames[i]),xend=as.name(vnames[i]),y=0,yend=max(pdfs.df$pdf)*0.05,col=factor(sol@cl)))+
+          ggplot2::scale_x_continuous(limits=limsi)
+      }else{
+        elipses.df = do.call(rbind,lapply(1:sol@K,function(k){ 
+          el.df = ellips(params$muk[[k]][c(i,j)],params$Sigmak[[k]][c(i,j),c(i,j)],nb_ech = nb_ech)
+          el.df$cl=k
+          el.df
+          }))
+        
+        limsi=c(range(X[,vnames[i]])[1]-diff(range(X[,vnames[i]]))*0.1,range(X[,i])[2]+diff(range(X[,vnames[i]]))*0.1)
+        limsj=c(range(X[,vnames[j]])[1]-diff(range(X[,vnames[j]]))*0.1,range(X[,j])[2]+diff(range(X[,vnames[j]]))*0.1)
+        #elipses.df = elipses.df[elipses.df$x >= limsi[1] & elipses.df$x <= limsi[2] & elipses.df$y >= limsj[1] & elipses.df$y <= limsj[2], ]
+        plt = ggplot2::ggplot(X,ggplot2::aes_(as.name(vnames[i]),as.name(vnames[j]),color=factor(sol@cl)))+
+          ggplot2::geom_point()+
+          ggplot2::geom_path(data=elipses.df,ggplot2::aes_(x=~x,y=~y,color=~factor(cl),group=~cl),na.rm=TRUE)+
+          ggplot2::scale_x_continuous(limits=limsi)+
+          ggplot2::scale_y_continuous(limits=limsj)
+      }
+      plts.df[[ii]]= plt
+      ii=ii+1
+    }
+  }
+  pm <- GGally::ggmatrix(plts.df,3, 3,xAxisLabels = vnames,yAxisLabels = vnames,byrow = FALSE,legend = c(1,i))+ggplot2::theme_bw()
+  pm
+  
+}
 
 
+
+ellips <- function(mu = c(0,0), Sigma=diag(rep(1,2)), nb_ech = 100, l=stats::qchisq(.95, df=2)){
+  t <- seq(0, 2*pi, len=nb_ech)
+  a <- sqrt(l*eigen(Sigma)$values[1])
+  b <- sqrt(l*eigen(Sigma)$values[2])
+  x <- a*cos(t)
+  y <- b*sin(t)
+  X <- cbind(x, y)
+  R <- eigen(Sigma)$vectors
+  Xf = X%*%t(R)
+  data.frame(x=Xf[,1]+mu[1],y=Xf[,2]+mu[2])
+}
 
 
 

@@ -3,40 +3,6 @@
 using namespace Rcpp;
 
 
-double golden_search(std::function<double(double)> f,double lower_bound,double upper_bound,double tol){
-  double golden = 2/(sqrt(5) + 1);
-  
-  
-  double x1 = upper_bound - golden*(upper_bound - lower_bound);
-  double x2 = lower_bound + golden*(upper_bound - lower_bound);
-  
-  
-  double f1 = f(x1);
-  double f2 = f(x2);
-  
-  int iteration = 0;
-  
-  while (std::abs(upper_bound - lower_bound) > tol){
-    iteration = iteration + 1;
-    
-    if (f2 > f1){
-      upper_bound = x2;
-      x2 = x1;
-      f2 = f1;
-      x1 = upper_bound - golden*(upper_bound - lower_bound);
-      f1 = f(x1);
-    }else{
-      lower_bound = x1;
-      x1 = x2;
-      f1 = f2;
-      x2 = lower_bound + golden*(upper_bound - lower_bound);
-      f2 = f(x2);
-    }
-  }
-  
-  return (lower_bound + upper_bound)/2;
-}
-
 
 arma::mat submatcross(int oldcl,int newcl,int K){
   arma::mat result(4*(K-1),2);
@@ -115,29 +81,29 @@ arma::sp_mat delcol(const arma::sp_mat & a, int ci){
   return result;
 }
 
-// // [[Rcpp::export]]
-// arma::sp_mat delrowcol(const arma::sp_mat & a, int ci){
+
+arma::sp_mat delrowcol_copy(const arma::sp_mat & a, int ci){
 //   //a.shed_row(ci);
 //   //a.shed_col(ci);
-//   arma::sp_mat result(a.n_rows-1,a.n_cols-1);
-//   int k=0;
-//   int l=0;
-//   for (arma::sp_mat::const_iterator i = a.begin(); i != a.end(); ++i) {
-//     k = i.row();
-//     if(i.row()>ci){
-//       k --; 
-//     }
-//     l=i.col();
-//     if(i.col()>ci){
-//       l--;
-//     }
-//     if(i.row()!=ci & i.col()!=ci){
-//       result(k,l) = a(i.row(),i.col());
-//     }
-//     
-//   }
-//   return result;
-// }
+  arma::sp_mat result(a.n_rows-1,a.n_cols-1);
+  int k=0;
+  int l=0;
+  for (arma::sp_mat::const_iterator i = a.begin(); i != a.end(); ++i) {
+    k = i.row();
+    if(i.row()>ci){
+      k --;
+    }
+    l=i.col();
+    if(i.col()>ci){
+      l--;
+    }
+    if((i.row()!=ci) & (i.col()!=ci)){
+      result(k,l) = a(i.row(),i.col());
+    }
+
+  }
+  return result;
+}
 
 
 
@@ -585,6 +551,27 @@ List gmm_marginal(const arma::mat X,double tau,int N0i, const arma::mat epsilon,
 }
 
 
+List gmm_marginal_spherical(const arma::mat X,double kappa,double tau,double beta, const arma::rowvec mu) {
+  
+  
+  double ng = X.n_rows, d = X.n_cols;
+  arma::rowvec m = arma::mean(X,0);
+  arma::mat M(ng,d);
+  M.each_row() = m;
+  arma::rowvec S = arma::sum(arma::pow(X-M,2),0);
+  arma::rowvec betan = beta +0.5*S + (tau*ng)/(2*(tau+ng))*arma::pow(m-mu,2);
+  double taun = tau+ng;
+  double kappan = kappa+(ng/2);
+  double log_evidence = arma::accu(lgamma(kappan)-lgamma(kappa)+kappa*log(beta)-kappan*log(betan)+0.5*log(tau)-0.5*log(taun)-ng/2*log(2*M_PI));
+    
+  return List::create(Named("S")  = S,
+                      Named("m") = m,
+                      Named("ng")  = ng,
+                      Named("log_evidence")=log_evidence);
+}
+
+
+
 double gauss_evidence(double d, double ng,double N0, double tau,double eps,arma::mat epsilon, arma::mat S, arma::rowvec m, arma::rowvec mu){
   arma::mat Sp = eps*epsilon+S;
   arma::vec di = arma::linspace<arma::vec>(1, d,d);
@@ -596,33 +583,6 @@ double gauss_evidence(double d, double ng,double N0, double tau,double eps,arma:
   return log_evidence; 
 }
 
-
-// [[Rcpp::export]]
-List gmm_marginal_eb(const arma::mat X,double tau,int N0i, const arma::mat epsilon, const arma::rowvec mu) {
-  
-  
-  double ng = X.n_rows, d = X.n_cols;
-  double N0 = N0i;
-  arma::rowvec m = arma::mean(X,0);
-  arma::mat M(ng,d);
-  M.each_row() = m;
-  arma::mat S = (X-M).t()*(X-M); 
-
-
-  
-  double eps = golden_search([&](double eps)->double{
-    return gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu)*(-1);
-  },0.5,10,0.001);
-  
-  double log_evidence = gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu);
-  arma::mat Sp = eps*epsilon+tau*ng/(tau+ng)*(m-mu).t()*(m-mu)+S;
-  return List::create(Named("S")  = S,
-                      Named("m") = m,
-                      Named("eps") = eps,
-                      Named("ng")  = ng,
-                      Named("Sp") = Sp,
-                      Named("log_evidence")=log_evidence);
-}
 
 
 // [[Rcpp::export]]
@@ -650,31 +610,27 @@ List gmm_marginal_add1(List current, const arma::rowvec X,double tau,int N0i, co
                       Named("log_evidence")=log_evidence);
 }
 
-// [[Rcpp::export]]
-List gmm_marginal_add1_eb(List current, const arma::rowvec X,double tau,int N0i, const arma::mat epsilon, const arma::rowvec mu) {
+
+
+List gmm_marginal_spherical_add1(List current, const arma::rowvec X,double kappa,double tau,double beta, const arma::rowvec mu) {
   
-  
-  double d = X.n_cols;
   
   arma::mat mold = as<arma::mat>(current["m"]);
   double ngold = as<double>(current["ng"]);
   double ng = ngold +1;
-  double N0 = N0i;
   arma::rowvec m = (mold*ngold+X)/ng;
-  arma::mat S =  as<arma::mat>(current["S"])+(X-m).t()*(X-mold);
-
-  double eps = golden_search([&](double eps)->double{
-    return gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu)*(-1);
-  },0.5,10,0.001);
-  
-  double log_evidence = gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu);
+  arma::rowvec S = as<arma::rowvec>(current["S"])+((X-mold)%(X-m));
+  arma::rowvec betan = beta +0.5*S + (tau*ng)/(2*(tau+ng))*arma::pow(m-mu,2);
+  double taun = tau+ng;
+  double kappan = kappa+(ng/2);
+  double log_evidence = arma::accu(lgamma(kappan)-lgamma(kappa)+kappa*log(beta)-kappan*log(betan)+0.5*log(tau)-0.5*log(taun)-ng/2*log(2*M_PI));
   
   return List::create(Named("S")  = S,
                       Named("m") = m,
-                      Named("eps") = eps,
                       Named("ng")  = ng,
                       Named("log_evidence")=log_evidence);
 }
+
 
 
 
@@ -703,32 +659,29 @@ List gmm_marginal_del1(List current, const arma::rowvec X,double tau,int N0i, co
                       Named("log_evidence")=log_evidence);
 }
 
-
-// [[Rcpp::export]]
-List gmm_marginal_del1_eb(List current, const arma::rowvec X,double tau,int N0i, const arma::mat epsilon, const arma::rowvec mu) {
+List gmm_marginal_spherical_del1(List current, const arma::rowvec X,double kappa,double tau,double beta, const arma::rowvec mu) {
   
-  
-  double d = X.n_cols;
   
   arma::mat mold = as<arma::mat>(current["m"]);
-  double ngold = as<int>(current["ng"]);
-  double ng = ngold -1;
-  double N0 = N0i;
+  double ngold = as<double>(current["ng"]);
+  double ng = ngold  - 1;
   arma::rowvec m = (mold*ngold-X)/ng;
-  arma::mat S =  as<arma::mat>(current["S"])-(X-m).t()*(X-mold);
-  
-  double eps = golden_search([&](double eps)->double{
-    return gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu)*(-1);
-  },0.5,10,0.001);
-  
-  double log_evidence = gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu);
-  
+  arma::rowvec S = as<arma::rowvec>(current["S"])-((X-mold)%(X-m));
+  arma::rowvec betan = beta +0.5*S + (tau*ng)/(2*(tau+ng))*arma::pow(m-mu,2);
+  double taun = tau+ng;
+  double kappan = kappa+(ng/2);
+  double log_evidence = arma::accu(lgamma(kappan)-lgamma(kappa)+kappa*log(beta)-kappan*log(betan)+0.5*log(tau)-0.5*log(taun)-ng/2*log(2*M_PI));
+
   return List::create(Named("S")  = S,
                       Named("m") = m,
-                      Named("eps") = eps,
                       Named("ng")  = ng,
                       Named("log_evidence")=log_evidence);
 }
+
+
+
+
+
 
 
 
@@ -764,11 +717,8 @@ List gmm_marginal_merge(List current1, List current2,double tau,int N0i, const a
                       Named("log_evidence")=log_evidence);
 }
 
-// [[Rcpp::export]]
-List gmm_marginal_merge_eb(List current1, List current2,double tau,int N0i, const arma::mat epsilon, const arma::rowvec mu) {
-  
-  
-  double N0 = N0i;
+
+List gmm_marginal_spherical_merge(List current1, List current2,double kappa,double tau,double beta, const arma::rowvec mu) {
   
   double ng1 = as<double>(current1["ng"]);
   double ng2 = as<double>(current2["ng"]);
@@ -779,23 +729,22 @@ List gmm_marginal_merge_eb(List current1, List current2,double tau,int N0i, cons
   arma::rowvec m = m1*(ng1/ng)+m2*(ng2/ng);
   
   double d = m1.n_cols;
-  arma::mat S1 =  as<arma::mat>(current1["S"]);
-  arma::mat S2 =  as<arma::mat>(current2["S"]);
-  arma::mat S = S1+ng1*(m1-m).t()*(m1-m)+S2+ng2*(m2-m).t()*(m2-m);
+  arma::rowvec S1 =  as<arma::rowvec>(current1["S"]);
+  arma::rowvec S2 =  as<arma::rowvec>(current2["S"]);
+  arma::rowvec S = S1+ng1*arma::pow(m1-m,2)+S2+ng2*arma::pow(m2-m,2);
   
-  double eps = golden_search([&](double eps)->double{
-    return gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu)*(-1);
-  },0.5,10,0.001);
   
-  double log_evidence = gauss_evidence(d,ng,N0,tau,eps,epsilon,S,m,mu);
-  
+  arma::rowvec betan = beta +0.5*S + (tau*ng)/(2*(tau+ng))*arma::pow(m-mu,2);
+  double taun = tau+ng;
+  double kappan = kappa+(ng/2);
+  double log_evidence = arma::accu(lgamma(kappan)-lgamma(kappa)+kappa*log(beta)-kappan*log(betan)+0.5*log(tau)-0.5*log(taun)-ng/2*log(2*M_PI));
   
   return List::create(Named("S")  = S,
                       Named("m") = m,
-                      Named("eps") = eps,
                       Named("ng")  = ng,
                       Named("log_evidence")=log_evidence);
 }
+
 
 
 

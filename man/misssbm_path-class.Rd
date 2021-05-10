@@ -10,7 +10,7 @@ An S4 class to represent a hierarchical fit of a stochastic block model, extend 
 \section{Slots}{
 
 \describe{
-\item{\code{model}}{a \code{\link{sbm-class}} object to store the model fitted}
+\item{\code{model}}{a \code{\link{misssbm-class}} object to store the model fitted}
 
 \item{\code{name}}{generative model name}
 
@@ -25,6 +25,22 @@ An S4 class to represent a hierarchical fit of a stochastic block model, extend 
 \item counts: numeric vector of size K with number of elements in each clusters
 \item x_counts: matrix of size K*K with the number of observed links between each pair of clusters 
 \item x_counts_obs: matrix of size K*K with the number of observed dyads between each pair of clusters 
+}}
+
+\item{\code{path}}{a list of size K-1 with that store all the solutions along the path. Each element is a list with the following fields:
+\itemize{
+\item icl1: icl value reach with this solution for alpha=1 
+\item logalpha: log(alpha) value were this solution is better than its parent
+\item K: number of clusters
+\item cl: vector of cluster indexes
+\item k,l: index of the cluster that were merged at this step
+\item merge_mat: lower triangular matrix of delta icl values 
+\item obs_stats: a list with the following elements:
+\itemize{
+\item counts: numeric vector of size K with number of elements in each clusters
+\item x_counts: matrix of size K*K with the number of observed links between each pair of clusters 
+\item x_counts_obs: matrix of size K*K with the number of observed dyads between each pair of clusters 
+}
 }}
 
 \item{\code{logalpha}}{value of log(alpha)}
