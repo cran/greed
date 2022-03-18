@@ -29,6 +29,18 @@ merge_mat <- function(data, init_fit) {
     .Call('_greed_merge_mat', PACKAGE = 'greed', data, init_fit)
 }
 
+test_swap <- function(model, data, cl, i, newcl) {
+    .Call('_greed_test_swap', PACKAGE = 'greed', model, data, cl, i, newcl)
+}
+
+test_merge <- function(model, data, cl, k, l) {
+    .Call('_greed_test_merge', PACKAGE = 'greed', model, data, cl, k, l)
+}
+
+test_merge_correction <- function(model, data, cl, k, l) {
+    .Call('_greed_test_merge_correction', PACKAGE = 'greed', model, data, cl, k, l)
+}
+
 sp_cross <- function(colvec, rowvec, self, oldcl, newcl, K) {
     .Call('_greed_sp_cross', PACKAGE = 'greed', colvec, rowvec, self, oldcl, newcl, K)
 }
@@ -53,24 +65,8 @@ delrowcol <- function(a, ci) {
     invisible(.Call('_greed_delrowcol', PACKAGE = 'greed', a, ci))
 }
 
-gsum_cube <- function(cl, x, K) {
-    .Call('_greed_gsum_cube', PACKAGE = 'greed', cl, x, K)
-}
-
-gsum_mat <- function(cl, x, K) {
-    .Call('_greed_gsum_mat', PACKAGE = 'greed', cl, x, K)
-}
-
-gsum_bimat <- function(clr, clc, x, K) {
-    .Call('_greed_gsum_bimat', PACKAGE = 'greed', clr, clc, x, K)
-}
-
 gsum_mat_sp <- function(cl, x, K) {
     .Call('_greed_gsum_mat_sp', PACKAGE = 'greed', cl, x, K)
-}
-
-gsum_mm <- function(cl, x, K) {
-    .Call('_greed_gsum_mm', PACKAGE = 'greed', cl, x, K)
 }
 
 lm_post <- function(X, y, regu, a0, b0) {

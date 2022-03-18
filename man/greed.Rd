@@ -5,38 +5,53 @@
 \alias{greed}
 \title{Model based hierarchical clustering}
 \usage{
-greed(
-  X,
-  K = 20,
-  model = find_model(X),
-  alg = methods::new("hybrid"),
-  verbose = FALSE
-)
+greed(X, model = find_model(X), K = 20, alg = Hybrid(), verbose = FALSE)
 }
 \arguments{
-\item{X}{data to cluster either a matrix,an array or a \code{\link{dgCMatrix-class}}}
+\item{X}{data to cluster either a data.frame, a matrix, an array, ... depending on the used generative model}
+
+\item{model}{a generative model to fit such as \code{\link{Gmm}},\code{\link{Sbm}},..}
 
 \item{K}{initial number of cluster}
 
-\item{model}{a generative model to fit \code{\link{sbm-class}}, \code{\link{dcsbm-class}}, \code{\link{co_dcsbm-class}}, \code{\link{mm-class}},\code{\link{gmm-class}}, \code{\link{diaggmm-class}} or \code{\link{mvmreg-class}}}
+\item{alg}{an optimization algorithm of class \code{\link{Alg-class}} such as \code{\link{Hybrid-class}} (default), \code{\link{Multistarts-class}}, \code{\link{Seed-class}} or \code{\link{Genetic-class}}}
 
-\item{alg}{an optimization algorithm of class \code{\link{hybrid-class}} (default), \code{\link{multistarts-class}}, \code{\link{seed-class}} or \code{\link{genetic-class}}}
-
-\item{verbose}{Boolean for verbose mode}
+\item{verbose}{boolean value for verbose mode}
 }
 \value{
-an \code{\link{icl_path-class}} object
+an \code{\link{IclPath-class}} object
 }
 \description{
+This function is the main function for fitting Dlvms with greed. 
+In the simplest case you may only provide a dataset and greed will find a suitable one. 
+The accepted classes for \code{X}  depends on the generative used which can be specified with the \code{model} argument. 
+See the \code{\link{DlvmPrior-class}} and the derived classes for details.
 
-
-Greed enables the clustering of networks and count data such as document-term
-matrix with different models. Model selection and clustering are performed in
+Greed enables the clustering of networks and count data matrix with different models. 
+Model selection and clustering are performed in
 combination by optimizing the Integrated Classification Likelihood.
 Optimization is performed thanks to a combination of greedy local search and
 a genetic algorithm. The main entry point is the \code{\link{greed}} function
 to perform the clustering, which is documented below. The package also
-provides sampling functions for all the implemented DLVMs: Mixture of
-Multinomials (\code{\link{rmm}}), Stochastic Block Model (\code{\link{rsbm}},
-\code{\link{rdcsbm}}) and Latent Block Model (\code{\link{rlbm}}).
+provides sampling functions for all the implemented DLVMs.
 }
+\examples{
+sbm <- rsbm(50, c(0.5, 0.5), diag(2) * 0.1 + 0.01)
+sol <- greed(sbm$x, model = Sbm())
+table(sbm$cl,clustering(sol))
+}
+\seealso{
+Other DlvmModels: 
+\code{\link{CombinedModels}},
+\code{\link{DcLbm}},
+\code{\link{DcSbm}},
+\code{\link{DiagGmm}},
+\code{\link{DlvmPrior-class}},
+\code{\link{Gmm}},
+\code{\link{Lca}},
+\code{\link{MoM}},
+\code{\link{MoR}},
+\code{\link{MultSbm}},
+\code{\link{Sbm}}
+}
+\concept{DlvmModels}

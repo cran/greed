@@ -1,11 +1,55 @@
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
+
 using namespace Rcpp;
 
+arma::vec count(const arma::uvec & cl,int K){
+  arma::vec result(K);
+  result.fill(0);
+  for(int i = 0; i < cl.n_elem; ++i) {
+    result(cl(i),0)+=1;
+  }
+  return result;
+}
+
+arma::vec update_count(const arma::vec & counts,int oldcl,int newcl) {
+  arma::vec cc = counts;
+  cc(oldcl)=cc(oldcl)-1;
+  cc(newcl)=cc(newcl)+1;
+  return cc;
+}
+
+arma::uvec to_zero_based(const arma::uvec & cl){
+  arma::uvec cln = arma::uvec(cl.n_elem);
+  for (int i=0;i<cl.n_elem;i++){
+    cln(i)=cl(i)-1;
+  }
+  return cln;
+}
 
 
-arma::mat submatcross(int oldcl,int newcl,int K){
-  arma::mat result(4*(K-1),2);
+arma::umat table_count(arma::uvec cl, arma::uvec x, int K, int nbmod){
+  arma::umat x_counts(K,nbmod);
+  x_counts.fill(0);
+  for(int i=0;i<x.n_rows;i++){
+    x_counts(cl(i),x(i))=x_counts(cl(i),x(i))+1;
+  }
+  return x_counts;
+}
+
+
+arma::mat gsum_mat(arma::uvec cl,const arma::sp_mat& x,int K) {
+  arma::mat result(K,K);
+  result.fill(0);
+  for (arma::sp_mat::const_iterator i = x.begin(); i != x.end(); ++i) {
+    result(cl(i.row()),cl(i.col())) += *i;
+  }
+  return result;
+}
+
+
+arma::umat submatcross(int oldcl,int newcl,int K){
+  arma::umat result(4*(K-1),2);
   int nbr = 0;
   result.fill(0);
   for(int i = 0; i < K; ++i) {
@@ -26,6 +70,46 @@ arma::mat submatcross(int oldcl,int newcl,int K){
   return result;
 }
 
+arma::sp_mat gsum_col(arma::uvec cl,const arma::sp_mat& x,int i, int K) {
+  arma::sp_mat ccol = x.col(i);
+  arma::sp_mat result(K,1);
+  for (arma::sp_mat::const_iterator i = ccol.begin(); i != ccol.end(); ++i) {
+    result(cl(i.row()),0) += *i;
+  }
+  return result;
+}
+
+arma::cube gsum_cube(arma::uvec cl,const arma::cube& x, int K){
+  arma::cube res = arma::cube(K,K,x.n_slices);
+  res.fill(0);
+  for(int i = 0; i < cl.n_elem; ++i) {
+    for(int j = 0; j < cl.n_elem; ++j) {
+      res.tube( cl(i), cl(j) )=res.tube( cl(i), cl(j) )+ x.tube(i,j);
+    }  
+  }
+  return res;
+}
+
+arma::sp_mat gsum_mm(arma::uvec cl,const arma::sp_mat& x,int K) {
+  arma::sp_mat result(x.n_rows,K);
+  for (arma::sp_mat::const_iterator i = x.begin(); i != x.end(); ++i) {
+    result(i.row(),cl(i.col())) += *i;
+  }
+  return result;
+}
+
+arma::mat gsum_bimat(arma::uvec clr,arma::uvec clc, const arma::sp_mat& x,int K) {
+  arma::mat result(K,K);
+  result.fill(0);
+  for (arma::sp_mat::const_iterator i = x.begin(); i != x.end(); ++i) {
+    result(clr(i.row()),clc(i.col())) += *i;
+  }
+  return result;
+}
+
+// previous tools were updated checked
+
+
 // [[Rcpp::export]]
 arma::sp_mat sp_cross(arma::sp_mat colvec,arma::sp_mat rowvec,int self, int oldcl, int newcl, int K){
   arma::sp_mat result(K,K);
@@ -37,6 +121,8 @@ arma::sp_mat sp_cross(arma::sp_mat colvec,arma::sp_mat rowvec,int self, int oldc
   result(newcl,newcl)=result(newcl,newcl)+self;
   return result;
 }
+
+
 
 // [[Rcpp::export]]
 arma::sp_mat add_sppat(const arma::sp_mat & a, const arma::sp_mat & b){
@@ -97,7 +183,7 @@ arma::sp_mat delrowcol_copy(const arma::sp_mat & a, int ci){
     if(i.col()>ci){
       l--;
     }
-    if((i.row()!=ci) & (i.col()!=ci)){
+    if((i.row()!=ci) && (i.col()!=ci)){
       result(k,l) = a(i.row(),i.col());
     }
 
@@ -114,47 +200,13 @@ void delrowcol(arma::sp_mat & a, int ci){
 }
 
 
-// [[Rcpp::export]]
-arma::cube gsum_cube(arma::vec cl,const arma::cube& x, int K){
-  arma::cube res = arma::cube(K,K,x.n_slices);
-  res.fill(0);
-  for(int i = 0; i < cl.n_elem; ++i) {
-    for(int j = 0; j < cl.n_elem; ++j) {
-      res.tube( cl(i), cl(j) )=res.tube( cl(i), cl(j) )+ x.tube(i,j);
-    }  
-  }
-  return res;
-}
-
-arma::vec count(arma::vec cl,int K){
-  arma::vec result(K);
-  result.fill(0);
-  for(int i = 0; i < cl.n_elem; ++i) {
-    result(cl(i),0)+=1;
-  }
-  return result;
-}
 
 
-// [[Rcpp::export]]
-arma::mat gsum_mat(arma::vec cl,const arma::sp_mat& x,int K) {
-  arma::mat result(K,K);
-  result.fill(0);
-  for (arma::sp_mat::const_iterator i = x.begin(); i != x.end(); ++i) {
-    result(cl(i.row()),cl(i.col())) += *i;
-  }
-  return result;
-}
 
-// [[Rcpp::export]]
-arma::mat gsum_bimat(arma::vec clr,arma::vec clc, const arma::sp_mat& x,int K) {
-  arma::mat result(K,K);
-  result.fill(0);
-  for (arma::sp_mat::const_iterator i = x.begin(); i != x.end(); ++i) {
-    result(clr(i.row()),clc(i.col())) += *i;
-  }
-  return result;
-}
+
+
+
+
 
 
 
@@ -167,30 +219,12 @@ arma::sp_mat gsum_mat_sp(arma::vec cl,const arma::sp_mat& x,int K) {
   return result;
 }
 
-// [[Rcpp::export]]
-arma::sp_mat gsum_mm(arma::vec cl,const arma::sp_mat& x,int K) {
-  arma::sp_mat result(x.n_rows,K);
-  for (arma::sp_mat::const_iterator i = x.begin(); i != x.end(); ++i) {
-    result(i.row(),cl(i.col())) += *i;
-  }
-  return result;
-}
-
-arma::sp_mat gsum_col(arma::vec cl,const arma::sp_mat& x,int i, int K) {
-  arma::sp_mat ccol = x.col(i);
-  arma::sp_mat result(K,1);
-  for (arma::sp_mat::const_iterator i = ccol.begin(); i != ccol.end(); ++i) {
-    result(cl(i.row()),0) += *i;
-  }
-  return result;
-}
 
 
-arma::mat update_count(arma::vec counts,int oldcl,int newcl) {
-  counts(oldcl)=counts(oldcl)-1;
-  counts(newcl)=counts(newcl)+1;
-  return counts;
-}
+
+
+
+
 
 
 
@@ -395,7 +429,7 @@ List mvlm_post_comp(const arma::mat X,const arma::mat Y,const arma::mat M,const 
  
   arma::mat Yty = Y.t()*Y+M.t()*K*M;
 
-  arma::mat Syx = Yty - Y.t()*X*mu;
+  arma::mat Syx = Yty - Xty.t()*mu;
   
   arma::vec di = arma::linspace<arma::vec>(1, d,d);
   double log_evidence = arma::accu(lgamma((n+N0+1-di)/2)) - arma::accu(lgamma((N0+1-di)/2));

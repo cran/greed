@@ -1,0 +1,116 @@
+---
+title: "greed"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{greed}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+
+# GREED : Bayesian greedy clustering
+
+
+Greed enables model-based clustering of networks, matrices of count data and much more with different types of generative models. Model-selection and clustering are performed in combination by optimizing the Integrated Classification Likelihood. Details of the algorithms and methods proposed by this package can be found in Côme, Jouvin, Latouche, and Bouveyron (2021) [10.1007/s11634-021-00440-z](https://doi.org/10.1007/s11634-021-00440-z).
+
+
+Dedicated to clustering and visualization, the package is very general and currently handles the following tasks:
+
+ * **Continuous data clustering** with Gaussian Mixture Models. A [GMM](https://comeetie.github.io/greed/articles/GMM.html) tutorial is available. See also the documentation for the `Gmm` and `DiagGmm` S4 classes.
+  * **Graph data clustering** with the Stochastic Block Model or its degree corrected variants. A [SBM](https://comeetie.github.io/greed/articles/SBM.html) tutorial is available . See also the documentation for the `Sbm` and `dcSbm` S4 classes.
+ * **Categorical data clustering** with the Latent Class Analysis. An [LCA](https://comeetie.github.io/greed/articles/LCA.html) tutorial is available. See also the documentation for the `Lca` S4 class.
+ * **Count data clustering** with the Mixture of Multinomials model. A tutorial will soon be available. For now, we refer to the documentation for the `Mom` S4 class.
+ * **Mixed-typed** data clustering, *e.g.* categorical and numerical but the package handles virtually any type of data combination by stacking models on top of each data types. For example graph data with continuous or categorical data attached to the nodes are handled. A [CombinedModels](https://comeetie.github.io/greed/articles/CombinedModels.html) tutorial is available. See also the documentation for the `CombinedModels` S4 class.
+ * **Mixture of regression** for simultaneous clustering and fitting a regression model in each cluster.  A [MoR](https://comeetie.github.io/greed/articles/MoR.html) tutorial is available. See also the documentation for the `MoR` S4 class.
+ * **Co-clustering** of binary and count-data via the Latent Block Model and its degree-corrected variant. A tutorial will soon be available. For now, we refer to the documentation for the `DcLbm` S4 class.
+ 
+
+
+With the Integrated Classification Likelihood, the parameters of the models are integrated out with a natural regularization effect for complex models. This penalization allows to automatically find a suitable value for the number of clusters $K^\star$. A user only needs to provide an initial guess for the number of clusters $K$, as well as values for the prior parameters (reasonable default values are used if no prior information is given). The default optimization is performed thanks to a combination of a greedy local search and a genetic algorithm described in [Côme, Jouvin, Latouche, and Bouveyron (2021)](https://doi.org/10.1007/s11634-021-00440-z), but several other optimization algorithms are also available.
+
+Eventually, a whole hierarchy of solutions from $K^\star$ to 1 cluster is extracted. This enables an ordering of the clusters, and the exploration of simpler clustering along the hierarchy. The package also provides some plotting functionality.
+
+
+## Usage: the greed function
+
+
+The main entry point for using the package is simply the`greed` function (see `?greed`). The generative model will be chosen automatically to fit the type of the provided data, but you may specify another choice with the `model` argument. 
+
+We illustrate its use on a **graph clustering** example with the classical Books network `?Books`.
+
+> More use cases and their specific plotting functionality are described in the vignettes.
+
+```{r example}
+library(greed)
+data(Books)
+sol <- greed(Books$X) 
+```
+
+You may specify the model you want to use and set the priors parameters with the (`model` argument), the optimization algorithm (`alg` argument) and the initial number of cluster `K`. Here `Books$X` is a square sparse matrix and a graph clustering ``?`DcSbm-class` `` model will be used by default. By default, the Hybrid genetic algorithm is used. 
+
+
+The next example illustrates a usage without default values. A binary `Sbm` prior is used, along with a spectral clustering algorithm for graphs.
+
+
+```{r sbm-example}
+sol <- greed(Books$X,model=Sbm(),alg=Seed(),K=10)
+```
+
+## Result analysis
+The results of `greed()` is an S4 class which depends on the `model` argument (here, an SBM) which comes with readily implemented methods: `clustering()` to access the estimated partitions, `K()` the estimated number of clusters, and `coef()` the (conditional) maximum a posteriori of the model parameters. 
+```{r coef,K, clust}
+knitr::kable(table(Books$label,clustering(sol)))
+K(sol)
+coef(sol)
+```
+
+
+## Inspecting the hierarchy 
+An important aspect of the **greed** package is its hierarchical clustering algorithm which extract a set of nested partitions from `K=K(sol)` to `K=1`. This hierarchy may be visualized thanks to a dendogram representing the fusion order and the level of regularization $- \log(\alpha)$ needed for each fusion.
+```{r, out.width="90%",fig.width=8,fig.height=8}
+plot(sol, type='tree') # try also: type="path"
+```
+
+Moreover, similar to standard hierarchical algorithm such as `hclust`, the `cut()` method allows you to extract a partition at any stage of the hierarchy. Its results is still an S4 object, and the S4 methods introduced earlier may again be used to investigate the results.
+
+```{r}
+sol_K3 = cut(sol, K=3)
+K(sol_K3)
+knitr::kable(table(Books$label,clustering(sol_K3)))
+```
+
+
+## Visualization
+Finally, the **greed** package propose efficient and model-adapted visualization via the `plot()` methods. In this graph clustering example, the `"blocks"` and `"nodelink"` display the cluster-aggregated adjacency matrix and diagram of the graph respectively. Note that the ordering of the clusters is the same than the one computed for the dendrogram, greatly enhancing visualization of the hierarchical structure.
+
+```{r plot,message=FALSE,results="hide", fig.show='hold', out.width="90%",fig.width=8,fig.height=8}
+plot(sol,type='blocks')
+plot(sol, type='nodelink')
+```
+
+## Other models
+As explained above, the greed package implements many standard models and the list may be displayed with
+```{r, eval=FALSE}
+available_models()
+```
+
+Many plotting functions are available and, depending of the specified `model`, different `type` argument may be specified. For further information we refer to the vignettes linked above for each use case.
+
+## Using parallel computing 
+
+For large datasets, it is possible to use parallelism to speed-up the computations thanks to the [future](https://github.com/HenrikBengtsson/future) package. You only need to specify the type of back-end you want to use, before calling the `?greed` function:
+```{r future}
+library(future)
+plan(multisession, workers=2) # may be increased
+```
+
+

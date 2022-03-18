@@ -7,61 +7,10 @@
 using namespace Rcpp;
 
 
-// main function to compute ICL from observed stats
-double IclModel::icl(const List & obs_stats){
-  // compute the first part p(Z) from clusters counts
-  arma::vec counts =as<arma::vec>(obs_stats["counts"]);
-  // number of cluster
-  int K = counts.n_elem;
-  // log(p(Z))
-  double icl_prop = lgamma(K*alpha)+arma::accu(lgamma(alpha+counts))-K*lgamma(alpha)-lgamma(arma::accu(counts+alpha));
-  // complete with log(p(X|X)) from derived class
-  double icl_e = this->icl_emiss(obs_stats);
-  double icl = icl_prop+icl_e;
-  return icl;
-}
-
-// main function to compute ICL from observed stats optimized version for computing delta which only invlove change in 2 clusters
-double IclModel::icl(const List & obs_stats,int oldcl,int newcl){
-  // compute the first part p(Z) from clusters counts
-  arma::vec counts =as<arma::vec>(obs_stats["counts"]);
-  int K = counts.n_elem;
-  double icl_prop = 0;
-  if(counts(oldcl)!=0){
-    // both clusters are healthy
-    icl_prop = lgamma(K*alpha)+lgamma(alpha+counts(oldcl))+lgamma(alpha+counts(newcl))-K*lgamma(alpha)-lgamma(K*alpha+N);
-  }else{
-    // cluster oldclass is dead, count(oldcl)==0 chnage of dimension
-    icl_prop = lgamma((K-1)*alpha)+lgamma(alpha+counts(newcl,0))-(K-1)*lgamma(alpha)-lgamma((K-1)*alpha+N);
-  }
-  // complete with log(p(X|X)) from derived class
-  double icl_e = this->icl_emiss(obs_stats,oldcl,newcl);
-  double icl = icl_prop+icl_e;
-  return icl;
-}
-
-// main function to compute ICL from observed stats optimized version for computing delta which only invlove change in 2 clusters ans sparse vector
-double IclModel::icl(const List & obs_stats,const List & up_stats,int oldcl,int newcl){
-  // compute the first part p(Z) from clusters counts
-  arma::vec counts =as<arma::vec>(obs_stats["counts"]);
-  int K = counts.n_elem;
-  double icl_prop = 0;
-  if(counts(oldcl)!=0){
-    // both clusters are healthy
-    icl_prop = lgamma(K*alpha)+lgamma(alpha+counts(oldcl))+lgamma(alpha+counts(newcl))-K*lgamma(alpha)-lgamma(K*alpha+N);
-  }else{
-    // cluster oldclass is dead, count(oldcl)==0 chnage of dimension
-    icl_prop = lgamma((K-1)*alpha)+lgamma(alpha+counts(newcl,0))-(K-1)*lgamma(alpha)-lgamma((K-1)*alpha+N);
-  }
-  // complete with log(p(X|X)) from derived class
-  double icl_e = this->icl_emiss(obs_stats,up_stats,oldcl,newcl);
-  double icl = icl_prop+icl_e;
-  return icl;
-}
-
 
 // main function for greedy swaping
 void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::uvec iclust){
+
   // number of pass over data
   int nbpass = 0;
   // number of move during the current pass
@@ -71,9 +20,12 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::uvec iclust
   // boolean to test if a move occurs
   bool hasMoved = true;
   // while their are moves
+
   while (hasMoved && nbpass < nbpassmax && K>1 && iclust.n_elem>1){
+    
+
     // suffle the index 
-    arma::vec pass= as<arma::vec>(sample(N,N))-1;
+    arma::uvec pass= as<arma::uvec>(sample(N,N))-1;
     // reinit move counter
     hasMoved=false;
     nbmove=0;
@@ -81,17 +33,25 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::uvec iclust
     for (int i=0;i<N ;++i){
       // current node
       cnode=pass(i);
-      //Rcout << cnode << "K:" << K << std::endl;
+
       if (workingset(cnode)==1){
         // compute delta swap
+
         arma::vec delta = this->delta_swap(cnode,iclust);
-        //Rcout << delta << std::endl;
+
         // best swap
-        int ncl = delta.index_max();
+        int ncl=cl(cnode);
+        try{
+          ncl = delta.index_max();
+        }catch(std::exception &ex){
+          warning("Undefined move cost, please check the priors parameters.");
+          ncl=cl(cnode);
+        }
+
         if(ncl!=cl(cnode)){
   
-          // if best swap corresponds to a move
-          // update the stats
+          //if best swap corresponds to a move
+          //update the stats
           if(counts(cl(cnode))==1){
             //Rcout << iclust << std::endl;
             iclust = iclust.elem(arma::find(iclust!=cl(cnode)));
@@ -110,9 +70,9 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::uvec iclust
         }else{
           arma::vec deltaneg = delta.elem(arma::find(delta<0));
           int bmn= deltaneg.index_max();
-          if(deltaneg(bmn) <  -10 ){
-            workingset(cnode) = 0;
-            //Rcout << "BMN :"<< bmn << "val" << deltaneg(bmn) << std::endl;
+          if(deltaneg(bmn) <  -4 ){
+             workingset(cnode) = 0;
+             //Rcout << "BMN :"<< bmn << "val" << deltaneg(bmn) << std::endl;
           }
         }
       }
@@ -121,15 +81,15 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::uvec iclust
     ++nbpass;
     // compute icl after the pass
     icl_value = icl(this->get_obs_stats());
-
+    if(verbose){
+      Rcout << "##################################"<< std::endl;
+      Rcout << "Swap convergence in " << nbpass << " epochs with " << nbmove << " moves, icl :" << icl_value << "K :" << K << ", working set size :" << arma::accu(workingset)  << std::endl;
+      //Rcout << "Swap convergence, with an ICL of "<< icl_value << " and " << K << " clusters." << std::endl;
+      Rcout << "##################################"<< std::endl; 
+    } 
 
   }
-  if(verbose){
-    Rcout << "##################################"<< std::endl;
-    Rcout << "Swap convergence in " << nbpass << " epochs with " << nbmove << " moves, icl :" << icl_value << "K :" << K << ", working set size :" << arma::accu(workingset)  << std::endl;
-    //Rcout << "Swap convergence, with an ICL of "<< icl_value << " and " << K << " clusters." << std::endl;
-    Rcout << "##################################"<< std::endl; 
-  } 
+
 }
 
 
@@ -146,7 +106,7 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::sp_mat & mo
   // while their are moves
   while (hasMoved && nbpass < nbpassmax && K>1){
     // suffle the index 
-    arma::vec pass= as<arma::vec>(sample(N,N))-1;
+    arma::uvec pass= as<arma::uvec>(sample(N,N))-1;
     // reinit move counter
     hasMoved=false;
     nbmove=0;
@@ -161,7 +121,14 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::sp_mat & mo
         arma::vec delta = this->delta_swap(cnode,iclust);
         //Rcout << delta << std::endl;
         // best swap
-        int ncl = delta.index_max();
+        int ncl=cl(cnode);
+        try{
+          ncl = delta.index_max();
+        }catch(std::exception &ex){
+          warning("Undefined move cost, please check the input data and the priors parameters.");
+          ncl=cl(cnode);
+        }
+        
         if(ncl!=cl(cnode)){
           
           // if best swap corresponds to a move
@@ -181,11 +148,16 @@ void IclModel::greedy_swap(int nbpassmax, arma::vec workingset,arma::sp_mat & mo
             break;
           }
         }else{
-          arma::vec deltaneg = delta.elem(arma::find(delta<0));
-          int bmn= deltaneg.index_max();
-          if(deltaneg(bmn) <  -5 ){
+          try{
+            arma::vec deltaneg = delta.elem(arma::find(delta<0));
+            int bmn= deltaneg.index_max();
+            if(deltaneg(bmn) <  -2 ){
+              workingset(cnode) = 0;
+              //Rcout << "BMN :"<< bmn << "val" << deltaneg(bmn) << std::endl;
+            }
+          }catch(std::exception &ex){
+            warning("Undefined move cost, please check the input data and the priors parameters.");
             workingset(cnode) = 0;
-            //Rcout << "BMN :"<< bmn << "val" << deltaneg(bmn) << std::endl;
           }
         }
       }
@@ -262,7 +234,7 @@ MergeMat IclModel::delta_merge(arma::mat delta, int obk, int obl, const List & o
       }else{
         //Rcout << k <<" : " <<l << " - " << obk <<" : " << obl <<std::endl;
         //Rcout << delta(k,l) << std::endl;
-        delta(k,l)=delta(k,l)+this->delta_merge_correction(k,l,obk,obl,old_stats);
+        delta(k,l)=delta(k,l)+this->delta_merge_correction_prop(k,l,obk,obl,old_stats)+this->delta_merge_correction(k,l,obk,obl,old_stats);
         //Rcout << delta(k,l) << std::endl;
       }
       if(delta(k,l)>bv){
@@ -328,7 +300,7 @@ SpMergeMat IclModel::delta_merge(arma::sp_mat & merge_graph, int obk, int obl,co
       if((k == obl) | (l == obl)){
         delta(k,l)=this->delta_merge(k,l);
       }else{
-        delta(k,l)=delta(k,l)+this->delta_merge_correction(k,l,obk,obl,old_stats);
+        delta(k,l)=delta(k,l)+this->delta_merge_correction_prop(k,l,obk,obl,old_stats)+this->delta_merge_correction(k,l,obk,obl,old_stats);
       }
       delta(l,k)=delta(k,l);
 
@@ -355,7 +327,7 @@ arma::sp_mat IclModel::greedy_merge(const arma::sp_mat & merge_graph){
   double cicl = this->icl(this->get_obs_stats());
   double bicl= cicl;
   arma::sp_mat best_merge_mat = delta;
-  arma::vec bcl = cl;
+  arma::uvec bcl = cl;
   // while their are merge to explore
   while(delta.n_nonzero>0 && K>1){
     
@@ -498,13 +470,14 @@ List IclModel::greedy_merge_path(){
     // store current solution
 
     path.push_back(List::create(Named("obs_stats") = this->get_obs_stats(), 
-                                Named("cl") = cl+1, 
                                 Named("K") = K,
                                 Named("icl1")=icl,
                                 Named("logalpha")=icl-iclold,
                                 Named("k")=k+1,
                                 Named("l")=l+1,
+                                // useless? : 
                                 Named("merge_mat") = arma::trimatl(merge_mat.getMergeMat())));
+                                
     // update merge matrix
     merge_mat = this->delta_merge(merge_mat.getMergeMat(),merge_mat.getK(),merge_mat.getL(),old_stats);
   }

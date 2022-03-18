@@ -6,28 +6,33 @@
 
 using namespace Rcpp;
 
+#ifdef RCPP_USE_GLOBAL_ROSTREAM
+Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
+Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
+#endif
+
 // post_probs
-arma::mat post_probs(S4 model, List data, arma::vec& clt);
+arma::mat post_probs(S4 model, List data, arma::uvec& clt);
 RcppExport SEXP _greed_post_probs(SEXP modelSEXP, SEXP dataSEXP, SEXP cltSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type clt(cltSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type clt(cltSEXP);
     rcpp_result_gen = Rcpp::wrap(post_probs(model, data, clt));
     return rcpp_result_gen;
 END_RCPP
 }
 // fit_greed_cstr
-S4 fit_greed_cstr(S4 model, List data, arma::vec& clt, arma::vec workingset, arma::uvec iclust, std::string type, int nb_max_pass, bool verbose);
+S4 fit_greed_cstr(S4 model, List data, arma::uvec& clt, arma::vec workingset, arma::uvec iclust, std::string type, int nb_max_pass, bool verbose);
 RcppExport SEXP _greed_fit_greed_cstr(SEXP modelSEXP, SEXP dataSEXP, SEXP cltSEXP, SEXP workingsetSEXP, SEXP iclustSEXP, SEXP typeSEXP, SEXP nb_max_passSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type clt(cltSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type clt(cltSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type workingset(workingsetSEXP);
     Rcpp::traits::input_parameter< arma::uvec >::type iclust(iclustSEXP);
     Rcpp::traits::input_parameter< std::string >::type type(typeSEXP);
@@ -38,14 +43,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // merge_cstr
-S4 merge_cstr(S4 model, List data, arma::vec& clt, arma::sp_mat& merge_graph, bool verbose);
+S4 merge_cstr(S4 model, List data, arma::uvec& clt, arma::sp_mat& merge_graph, bool verbose);
 RcppExport SEXP _greed_merge_cstr(SEXP modelSEXP, SEXP dataSEXP, SEXP cltSEXP, SEXP merge_graphSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type clt(cltSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type clt(cltSEXP);
     Rcpp::traits::input_parameter< arma::sp_mat& >::type merge_graph(merge_graphSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
     rcpp_result_gen = Rcpp::wrap(merge_cstr(model, data, clt, merge_graph, verbose));
@@ -53,14 +58,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // swap_cstr
-S4 swap_cstr(S4 model, List data, arma::vec& clt, arma::sp_mat& move_mat, int nb_max_pass, bool verbose);
+S4 swap_cstr(S4 model, List data, arma::uvec& clt, arma::sp_mat& move_mat, int nb_max_pass, bool verbose);
 RcppExport SEXP _greed_swap_cstr(SEXP modelSEXP, SEXP dataSEXP, SEXP cltSEXP, SEXP move_matSEXP, SEXP nb_max_passSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type clt(cltSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type clt(cltSEXP);
     Rcpp::traits::input_parameter< arma::sp_mat& >::type move_mat(move_matSEXP);
     Rcpp::traits::input_parameter< int >::type nb_max_pass(nb_max_passSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
@@ -69,14 +74,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // fit_greed
-S4 fit_greed(S4 model, List data, arma::vec& clt, std::string type, int nb_max_pass, bool verbose);
+S4 fit_greed(S4 model, List data, arma::uvec& clt, std::string type, int nb_max_pass, bool verbose);
 RcppExport SEXP _greed_fit_greed(SEXP modelSEXP, SEXP dataSEXP, SEXP cltSEXP, SEXP typeSEXP, SEXP nb_max_passSEXP, SEXP verboseSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< arma::vec& >::type clt(cltSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type clt(cltSEXP);
     Rcpp::traits::input_parameter< std::string >::type type(typeSEXP);
     Rcpp::traits::input_parameter< int >::type nb_max_pass(nb_max_passSEXP);
     Rcpp::traits::input_parameter< bool >::type verbose(verboseSEXP);
@@ -105,6 +110,51 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< List >::type data(dataSEXP);
     Rcpp::traits::input_parameter< S4 >::type init_fit(init_fitSEXP);
     rcpp_result_gen = Rcpp::wrap(merge_mat(data, init_fit));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_swap
+double test_swap(S4 model, List data, arma::uvec& cl, int i, int newcl);
+RcppExport SEXP _greed_test_swap(SEXP modelSEXP, SEXP dataSEXP, SEXP clSEXP, SEXP iSEXP, SEXP newclSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type cl(clSEXP);
+    Rcpp::traits::input_parameter< int >::type i(iSEXP);
+    Rcpp::traits::input_parameter< int >::type newcl(newclSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_swap(model, data, cl, i, newcl));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_merge
+double test_merge(S4 model, List data, arma::uvec& cl, int k, int l);
+RcppExport SEXP _greed_test_merge(SEXP modelSEXP, SEXP dataSEXP, SEXP clSEXP, SEXP kSEXP, SEXP lSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type cl(clSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type l(lSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_merge(model, data, cl, k, l));
+    return rcpp_result_gen;
+END_RCPP
+}
+// test_merge_correction
+arma::mat test_merge_correction(S4 model, List data, arma::uvec& cl, int k, int l);
+RcppExport SEXP _greed_test_merge_correction(SEXP modelSEXP, SEXP dataSEXP, SEXP clSEXP, SEXP kSEXP, SEXP lSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< S4 >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< List >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< arma::uvec& >::type cl(clSEXP);
+    Rcpp::traits::input_parameter< int >::type k(kSEXP);
+    Rcpp::traits::input_parameter< int >::type l(lSEXP);
+    rcpp_result_gen = Rcpp::wrap(test_merge_correction(model, data, cl, k, l));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -183,46 +233,6 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// gsum_cube
-arma::cube gsum_cube(arma::vec cl, const arma::cube& x, int K);
-RcppExport SEXP _greed_gsum_cube(SEXP clSEXP, SEXP xSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type cl(clSEXP);
-    Rcpp::traits::input_parameter< const arma::cube& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(gsum_cube(cl, x, K));
-    return rcpp_result_gen;
-END_RCPP
-}
-// gsum_mat
-arma::mat gsum_mat(arma::vec cl, const arma::sp_mat& x, int K);
-RcppExport SEXP _greed_gsum_mat(SEXP clSEXP, SEXP xSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type cl(clSEXP);
-    Rcpp::traits::input_parameter< const arma::sp_mat& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(gsum_mat(cl, x, K));
-    return rcpp_result_gen;
-END_RCPP
-}
-// gsum_bimat
-arma::mat gsum_bimat(arma::vec clr, arma::vec clc, const arma::sp_mat& x, int K);
-RcppExport SEXP _greed_gsum_bimat(SEXP clrSEXP, SEXP clcSEXP, SEXP xSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type clr(clrSEXP);
-    Rcpp::traits::input_parameter< arma::vec >::type clc(clcSEXP);
-    Rcpp::traits::input_parameter< const arma::sp_mat& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(gsum_bimat(clr, clc, x, K));
-    return rcpp_result_gen;
-END_RCPP
-}
 // gsum_mat_sp
 arma::sp_mat gsum_mat_sp(arma::vec cl, const arma::sp_mat& x, int K);
 RcppExport SEXP _greed_gsum_mat_sp(SEXP clSEXP, SEXP xSEXP, SEXP KSEXP) {
@@ -233,19 +243,6 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::sp_mat& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type K(KSEXP);
     rcpp_result_gen = Rcpp::wrap(gsum_mat_sp(cl, x, K));
-    return rcpp_result_gen;
-END_RCPP
-}
-// gsum_mm
-arma::sp_mat gsum_mm(arma::vec cl, const arma::sp_mat& x, int K);
-RcppExport SEXP _greed_gsum_mm(SEXP clSEXP, SEXP xSEXP, SEXP KSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type cl(clSEXP);
-    Rcpp::traits::input_parameter< const arma::sp_mat& >::type x(xSEXP);
-    Rcpp::traits::input_parameter< int >::type K(KSEXP);
-    rcpp_result_gen = Rcpp::wrap(gsum_mm(cl, x, K));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -493,17 +490,16 @@ static const R_CallMethodDef CallEntries[] = {
     {"_greed_fit_greed", (DL_FUNC) &_greed_fit_greed, 6},
     {"_greed_fit_greed_path", (DL_FUNC) &_greed_fit_greed_path, 2},
     {"_greed_merge_mat", (DL_FUNC) &_greed_merge_mat, 2},
+    {"_greed_test_swap", (DL_FUNC) &_greed_test_swap, 5},
+    {"_greed_test_merge", (DL_FUNC) &_greed_test_merge, 5},
+    {"_greed_test_merge_correction", (DL_FUNC) &_greed_test_merge_correction, 5},
     {"_greed_sp_cross", (DL_FUNC) &_greed_sp_cross, 6},
     {"_greed_add_sppat", (DL_FUNC) &_greed_add_sppat, 2},
     {"_greed_add_spmatpat", (DL_FUNC) &_greed_add_spmatpat, 2},
     {"_greed_which_spmatpat", (DL_FUNC) &_greed_which_spmatpat, 2},
     {"_greed_delcol", (DL_FUNC) &_greed_delcol, 2},
     {"_greed_delrowcol", (DL_FUNC) &_greed_delrowcol, 2},
-    {"_greed_gsum_cube", (DL_FUNC) &_greed_gsum_cube, 3},
-    {"_greed_gsum_mat", (DL_FUNC) &_greed_gsum_mat, 3},
-    {"_greed_gsum_bimat", (DL_FUNC) &_greed_gsum_bimat, 4},
     {"_greed_gsum_mat_sp", (DL_FUNC) &_greed_gsum_mat_sp, 3},
-    {"_greed_gsum_mm", (DL_FUNC) &_greed_gsum_mm, 3},
     {"_greed_lm_post", (DL_FUNC) &_greed_lm_post, 5},
     {"_greed_lm_post_add1", (DL_FUNC) &_greed_lm_post_add1, 6},
     {"_greed_lm_post_del1", (DL_FUNC) &_greed_lm_post_del1, 6},
