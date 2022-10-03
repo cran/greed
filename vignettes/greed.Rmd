@@ -76,7 +76,7 @@ coef(sol)
 
 ## Inspecting the hierarchy 
 An important aspect of the **greed** package is its hierarchical clustering algorithm which extract a set of nested partitions from `K=K(sol)` to `K=1`. This hierarchy may be visualized thanks to a dendogram representing the fusion order and the level of regularization $- \log(\alpha)$ needed for each fusion.
-```{r, out.width="90%",fig.width=8,fig.height=8}
+```{r, out.width="90%",fig.width=8,fig.height=8,eval=FALSE}
 plot(sol, type='tree') # try also: type="path"
 ```
 
@@ -92,7 +92,7 @@ knitr::kable(table(Books$label,clustering(sol_K3)))
 ## Visualization
 Finally, the **greed** package propose efficient and model-adapted visualization via the `plot()` methods. In this graph clustering example, the `"blocks"` and `"nodelink"` display the cluster-aggregated adjacency matrix and diagram of the graph respectively. Note that the ordering of the clusters is the same than the one computed for the dendrogram, greatly enhancing visualization of the hierarchical structure.
 
-```{r plot,message=FALSE,results="hide", fig.show='hold', out.width="90%",fig.width=8,fig.height=8}
+```{r plot,message=FALSE,results="hide", fig.show='hold', out.width="90%",fig.width=8,fig.height=8,eval=FALSE}
 plot(sol,type='blocks')
 plot(sol, type='nodelink')
 ```
@@ -108,7 +108,7 @@ Many plotting functions are available and, depending of the specified `model`, d
 ## Using parallel computing 
 
 For large datasets, it is possible to use parallelism to speed-up the computations thanks to the [future](https://github.com/HenrikBengtsson/future) package. You only need to specify the type of back-end you want to use, before calling the `?greed` function:
-```{r future}
+```{r future,eval=FALSE}
 library(future)
 plan(multisession, workers=2) # may be increased
 ```

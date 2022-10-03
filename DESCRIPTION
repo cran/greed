@@ -2,8 +2,8 @@ Package: greed
 Type: Package
 Title: Clustering and Model Selection with the Integrated
         Classification Likelihood
-Version: 0.6.0
-Date: 2022-03-18
+Version: 0.6.1
+Date: 2022-09-27
 Authors@R: 
     c(person(given = "Etienne",
              family = "Côme",
@@ -37,8 +37,8 @@ Collate: 'RcppExports.R' 'tools_misc.R' 'models_classes.R'
 Language: en-US
 LazyData: true
 NeedsCompilation: yes
-Packaged: 2022-03-18 11:13:17 UTC; comeetie
+Packaged: 2022-10-03 10:12:02 UTC; comeetie
 Author: Etienne Côme [aut, cre],
   Nicolas Jouvin [aut]
 Repository: CRAN
-Date/Publication: 2022-03-18 12:50:02 UTC
+Date/Publication: 2022-10-03 22:00:05 UTC
