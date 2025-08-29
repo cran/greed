@@ -1,3 +1,11 @@
+# greed 0.6.2
+
+* only small change in doc to comply with CRAN notes 
+
+# greed 0.6.1
+
+* fixe url problems in doc
+
 # greed 0.6
 
 * Finalization of the Models and Algorithms API with user friendly constructors and final model acronyms see greed::available_algorithms() and greed::available_models()
